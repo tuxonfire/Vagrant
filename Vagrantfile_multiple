@@ -1,0 +1,54 @@
+# Defines our Vagrant environment
+# =^^=
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+
+Vagrant.configure("2") do |config|
+    servers=[
+        {
+          :hostname => "mybox01",
+          :box => "generic/rhel8",
+          :ip => "10.10.10.15",
+          :ssh_port => '2200'
+        },
+        {
+          :hostname => "mybox02",
+          :box => "generic/rhel8",
+          :ip => "10.10.10.16",
+          :ssh_port => '2201'
+        },
+        {
+          :hostname => "otherbox",
+          :box => "generic/rhel8",
+          :ip => "10.10.10.17",
+          :ssh_port => '2203'
+        },
+        {
+          :hostname => "rhel8",
+          :box => "generic/rhel8",
+          :ip => "10.10.10.18",
+          :ssh_port => '2202'
+        }
+
+      ]
+    servers.each do |machine|
+        config.vm.define machine[:hostname] do |node|
+            node.vm.box = machine[:box]
+            node.vm.hostname = machine[:hostname]
+            node.vm.network :private_network, ip: machine[:ip]
+            node.vm.network "forwarded_port", guest: 443, host: 8081, auto_correct: true, protocol: "tcp"
+#            node.vm.synced_folder "./thisfolder/", "/vagrant_data"
+            node.vm.synced_folder "/thisfolder", "/vagrant_data"
+            node.vm.provider :virtualbox do |vb|
+                vb.customize ["modifyvm", :id, "--memory", 4046]
+                vb.customize ["modifyvm", :id, "--cpus", 2]
+            end
+            node.vm.provision 'bootstrap', type: 'ansible' do |ansible|
+              ansible.compatibility_mode = "2.0"
+              ansible.playbook = './provisioning/boostrap-tower.yml'
+            end
+        end
+    end
+end
+
